@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>患者入院管理</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: #f0f4f8;
+            color: #2d3748;
+            min-height: 100vh;
+        }
+
+        /* ── Header ── */
+        .header {
+            background: #2b6cb0;
+            color: white;
+            padding: 14px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .header h1 { font-size: 19px; font-weight: 700; }
+        .header-actions { display: flex; gap: 8px; align-items: center; }
+
+        .btn {
+            padding: 7px 14px;
+            border-radius: 7px;
+            border: none;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .btn-primary { background: #fff; color: #2b6cb0; }
+        .btn-primary:hover { background: #ebf8ff; }
+        .btn-icon {
+            background: transparent;
+            color: white;
+            border: 1px solid rgba(255,255,255,0.5);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-icon:hover { background: rgba(255,255,255,0.15); }
+
+        /* ── Summary cards ── */
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            padding: 16px 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        @media (max-width: 700px) {
+            .summary { grid-template-columns: repeat(2, 1fr); }
+        }
+        .summary-card {
+            background: white;
+            border-radius: 12px;
+            padding: 14px 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+            border-top: 4px solid;
+        }
+        .summary-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.13); }
+        .summary-card.today    { border-color: #e53e3e; }
+        .summary-card.tomorrow { border-color: #ed8936; }
+        .summary-card.thisweek { border-color: #3182ce; }
+        .summary-card.future   { border-color: #805ad5; }
+        .summary-card .count { font-size: 30px; font-weight: 700; line-height: 1; }
+        .summary-card.today    .count { color: #e53e3e; }
+        .summary-card.tomorrow .count { color: #ed8936; }
+        .summary-card.thisweek .count { color: #3182ce; }
+        .summary-card.future   .count { color: #805ad5; }
+        .summary-card .label { font-size: 12px; color: #718096; margin-top: 6px; }
+
+        /* ── Sections ── */
+        .sections {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px 48px;
+        }
+        .section { margin-bottom: 28px; }
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid;
+        }
+        .section-header.today    { border-color: #e53e3e; }
+        .section-header.tomorrow { border-color: #ed8936; }
+        .section-header.thisweek { border-color: #3182ce; }
+        .section-header.future   { border-color: #805ad5; }
+        .section-title { font-size: 15px; font-weight: 700; }
+        .section-header.today    .section-title { color: #e53e3e; }
+        .section-header.tomorrow .section-title { color: #ed8936; }
+        .section-header.thisweek .section-title { color: #3182ce; }
+        .section-header.future   .section-title { color: #805ad5; }
+        .section-count {
+            background: #edf2f7;
+            color: #718096;
+            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 20px;
+        }
+
+        /* ── Patient grid ── */
+        .patient-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 12px;
+        }
+        @media (max-width: 600px) {
+            .patient-grid { grid-template-columns: 1fr; }
+        }
+        .empty-tip {
+            color: #a0aec0;
+            font-size: 13px;
+            padding: 18px 0;
+            grid-column: 1/-1;
+        }
+
+        /* ── Patient card ── */
+        .patient-card {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+            transition: all 0.2s;
+            position: relative;
+        }
+        .patient-card:hover { box-shadow: 0 4px 14px rgba(0,0,0,0.12); }
+        .patient-card.contacted { opacity: 0.6; background: #f7fafc; }
+        .contacted-badge {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: #48bb78;
+            color: white;
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 20px;
+        }
+        .card-seq { font-size: 11px; color: #a0aec0; margin-bottom: 6px; }
+        .patient-name { font-size: 17px; font-weight: 700; color: #1a202c; }
+        .patient-info { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; }
+        .info-row { display: flex; align-items: flex-start; gap: 6px; font-size: 13px; color: #4a5568; }
+        .info-label { color: #a0aec0; min-width: 30px; font-size: 12px; flex-shrink: 0; padding-top: 1px; }
+        .phone-link { color: #3182ce; text-decoration: none; font-weight: 500; }
+        .phone-link:hover { text-decoration: underline; }
+        .diagnosis-text { color: #553c9a; }
+        .notes-text { color: #718096; font-style: italic; }
+
+        .card-actions {
+            display: flex;
+            gap: 6px;
+            margin-top: 12px;
+            padding-top: 10px;
+            border-top: 1px solid #f0f0f0;
+        }
+        .action-btn {
+            flex: 1;
+            padding: 6px 0;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            background: white;
+            cursor: pointer;
+            font-size: 11px;
+            color: #4a5568;
+            transition: all 0.15s;
+            text-align: center;
+        }
+        .action-btn.contact-btn { color: #38a169; }
+        .action-btn.contact-btn:hover { background: #f0fff4; border-color: #9ae6b4; }
+        .action-btn.edit-btn    { color: #3182ce; }
+        .action-btn.edit-btn:hover { background: #ebf8ff; border-color: #90cdf4; }
+        .action-btn.delete-btn  { color: #e53e3e; }
+        .action-btn.delete-btn:hover { background: #fff5f5; border-color: #feb2b2; }
+
+        /* ── Modal ── */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .modal-overlay.show { display: flex; }
+        .modal {
+            background: white;
+            border-radius: 16px;
+            padding: 22px;
+            width: 100%;
+            max-width: 460px;
+            margin: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+        }
+        .modal-title { font-size: 17px; font-weight: 700; }
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 22px;
+            cursor: pointer;
+            color: #a0aec0;
+            line-height: 1;
+            padding: 2px 6px;
+        }
+        .modal-close:hover { color: #4a5568; }
+
+        .form-group { margin-bottom: 14px; }
+        .form-label { display: block; font-size: 12px; font-weight: 600; color: #4a5568; margin-bottom: 5px; }
+        .form-input {
+            width: 100%;
+            padding: 9px 11px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+        .form-input:focus { outline: none; border-color: #3182ce; box-shadow: 0 0 0 3px rgba(49,130,206,0.1); }
+        textarea.form-input { resize: vertical; min-height: 72px; }
+
+        /* Upload */
+        .upload-area {
+            border: 2px dashed #cbd5e0;
+            border-radius: 8px;
+            padding: 18px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 10px;
+        }
+        .upload-area:hover { border-color: #3182ce; background: #ebf8ff; }
+        .upload-area.has-image { border-style: solid; border-color: #48bb78; background: #f0fff4; }
+        .upload-icon { font-size: 28px; margin-bottom: 6px; }
+        .upload-text { font-size: 13px; color: #718096; }
+        .upload-preview { max-width: 100%; max-height: 180px; border-radius: 6px; margin-top: 8px; }
+
+        .recognize-btn {
+            width: 100%;
+            padding: 9px;
+            background: #3182ce;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            cursor: pointer;
+            margin-bottom: 4px;
+            transition: background 0.2s;
+            font-family: inherit;
+        }
+        .recognize-btn:hover { background: #2c5282; }
+        .recognize-btn:disabled { background: #a0aec0; cursor: not-allowed; }
+        .recognize-status { text-align: center; font-size: 12px; color: #718096; margin-bottom: 12px; min-height: 18px; }
+
+        .divider {
+            text-align: center;
+            color: #a0aec0;
+            font-size: 11px;
+            margin: 10px 0 14px;
+            position: relative;
+        }
+        .divider::before, .divider::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            width: 42%;
+            height: 1px;
+            background: #e2e8f0;
+        }
+        .divider::before { left: 0; }
+        .divider::after  { right: 0; }
+
+        .modal-footer { display: flex; gap: 10px; margin-top: 18px; }
+        .btn-save {
+            flex: 1;
+            padding: 11px;
+            background: #2b6cb0;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            transition: background 0.2s;
+        }
+        .btn-save:hover { background: #2c5282; }
+        .btn-cancel {
+            padding: 11px 18px;
+            background: #edf2f7;
+            color: #4a5568;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            font-family: inherit;
+            transition: background 0.2s;
+        }
+        .btn-cancel:hover { background: #e2e8f0; }
+
+        .settings-tip { font-size: 11px; color: #a0aec0; margin-top: 4px; }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 28px;
+            left: 50%;
+            transform: translateX(-50%) translateY(14px);
+            background: #2d3748;
+            color: white;
+            padding: 9px 20px;
+            border-radius: 8px;
+            font-size: 13px;
+            opacity: 0;
+            transition: all 0.3s;
+            z-index: 2000;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+        .toast.success { background: #38a169; }
+        .toast.error   { background: #e53e3e; }
+    </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+    <h1>🏥 患者入院管理</h1>
+    <div class="header-actions">
+        <button class="btn-icon" onclick="openSettings()">⚙ API设置</button>
+        <button class="btn btn-primary" onclick="openAddModal()">＋ 添加患者</button>
+    </div>
+</div>
+
+<!-- Summary -->
+<div class="summary">
+    <div class="summary-card today"    onclick="scrollToSection('today')">
+        <div class="count" id="count-today">0</div>
+        <div class="label">今日入院</div>
+    </div>
+    <div class="summary-card tomorrow" onclick="scrollToSection('tomorrow')">
+        <div class="count" id="count-tomorrow">0</div>
+        <div class="label">明日入院</div>
+    </div>
+    <div class="summary-card thisweek" onclick="scrollToSection('thisweek')">
+        <div class="count" id="count-thisweek">0</div>
+        <div class="label">本周患者</div>
+    </div>
+    <div class="summary-card future"   onclick="scrollToSection('future')">
+        <div class="count" id="count-future">0</div>
+        <div class="label">下周后患者</div>
+    </div>
+</div>
+
+<!-- Sections -->
+<div class="sections">
+    <div class="section" id="section-today">
+        <div class="section-header today">
+            <span class="section-title">今日入院</span>
+            <span class="section-count" id="lc-today">0 人</span>
+        </div>
+        <div class="patient-grid" id="grid-today"></div>
+    </div>
+
+    <div class="section" id="section-tomorrow">
+        <div class="section-header tomorrow">
+            <span class="section-title">明日入院</span>
+            <span class="section-count" id="lc-tomorrow">0 人</span>
+        </div>
+        <div class="patient-grid" id="grid-tomorrow"></div>
+    </div>
+
+    <div class="section" id="section-thisweek">
+        <div class="section-header thisweek">
+            <span class="section-title">本周患者</span>
+            <span class="section-count" id="lc-thisweek">0 人</span>
+        </div>
+        <div class="patient-grid" id="grid-thisweek"></div>
+    </div>
+
+    <div class="section" id="section-future">
+        <div class="section-header future">
+            <span class="section-title">下周后患者</span>
+            <span class="section-count" id="lc-future">0 人</span>
+        </div>
+        <div class="patient-grid" id="grid-future"></div>
+    </div>
+</div>
+
+<!-- Add/Edit Modal -->
+<div class="modal-overlay" id="patientModal">
+    <div class="modal">
+        <div class="modal-header">
+            <span class="modal-title" id="modalTitle">添加患者</span>
+            <button class="modal-close" onclick="closeModal('patientModal')">×</button>
+        </div>
+
+        <div class="upload-area" id="uploadArea" onclick="document.getElementById('imageInput').click()">
+            <div class="upload-icon">📄</div>
+            <div class="upload-text">点击上传入院证图片（可选）</div>
+        </div>
+        <input type="file" id="imageInput" accept="image/*" style="display:none" onchange="handleImageUpload(event)">
+
+        <button class="recognize-btn" id="recognizeBtn" onclick="recognizeImage()" disabled>
+            🔍 自动识别姓名 / 电话 / 诊断
+        </button>
+        <div class="recognize-status" id="recognizeStatus"></div>
+
+        <div class="divider">患者信息</div>
+
+        <div class="form-group">
+            <label class="form-label">姓名 *</label>
+            <input type="text" class="form-input" id="f-name" placeholder="患者姓名">
+        </div>
+        <div class="form-group">
+            <label class="form-label">电话</label>
+            <input type="tel" class="form-input" id="f-phone" placeholder="联系电话">
+        </div>
+        <div class="form-group">
+            <label class="form-label">入院日期 *</label>
+            <input type="date" class="form-input" id="f-date">
+        </div>
+        <div class="form-group">
+            <label class="form-label">诊断</label>
+            <input type="text" class="form-input" id="f-diagnosis" placeholder="诊断信息">
+        </div>
+        <div class="form-group">
+            <label class="form-label">备注</label>
+            <textarea class="form-input" id="f-notes" placeholder="备注信息"></textarea>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeModal('patientModal')">取消</button>
+            <button class="btn-save" onclick="savePatient()">保存</button>
+        </div>
+    </div>
+</div>
+
+<!-- Settings Modal -->
+<div class="modal-overlay" id="settingsModal">
+    <div class="modal">
+        <div class="modal-header">
+            <span class="modal-title">⚙ API 设置</span>
+            <button class="modal-close" onclick="closeModal('settingsModal')">×</button>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Kimi API Key</label>
+            <input type="password" class="form-input" id="s-apikey" placeholder="sk-...">
+            <div class="settings-tip">在 platform.moonshot.cn 获取 API Key</div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeModal('settingsModal')">取消</button>
+            <button class="btn-save" onclick="saveSettings()">保存</button>
+        </div>
+    </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── State ──────────────────────────────────────────
+let patients  = JSON.parse(localStorage.getItem('patients') || '[]');
+let apiKey    = localStorage.getItem('kimiApiKey') || 'sk-cd2w8i5qQwzPvEAkfHjMRTXmYy2q2oOLHwT1arZm1enhx5sR';
+let editingId = null;
+let currentImageBase64 = null;
+
+// ── Date helpers ───────────────────────────────────
+function toDateStr(d) { return d.toISOString().slice(0, 10); }
+function todayStr()    { return toDateStr(new Date()); }
+function tomorrowStr() { const d = new Date(); d.setDate(d.getDate() + 1); return toDateStr(d); }
+
+function weekRange() {
+    const now = new Date();
+    const dow = now.getDay(); // 0=Sun
+    const diffMon = dow === 0 ? -6 : 1 - dow;
+    const mon = new Date(now); mon.setDate(now.getDate() + diffMon);
+    const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+    return { start: toDateStr(mon), end: toDateStr(sun) };
+}
+
+function getCategory(dateStr) {
+    if (!dateStr) return 'future';
+    const t   = todayStr();
+    const tom = tomorrowStr();
+    const w   = weekRange();
+    if (dateStr === t)   return 'today';
+    if (dateStr === tom) return 'tomorrow';
+    if (dateStr >= w.start && dateStr <= w.end) return 'thisweek';
+    return 'future';
+}
+
+function fmtDate(dateStr) {
+    if (!dateStr) return '-';
+    const [y, m, d] = dateStr.split('-');
+    return `${m}月${d}日`;
+}
+
+// ── Render ─────────────────────────────────────────
+function render() {
+    const cats = { today: [], tomorrow: [], thisweek: [], future: [] };
+
+    // Assign display sequence by creation order
+    const sorted = [...patients].sort((a, b) => a.createdAt - b.createdAt);
+    sorted.forEach((p, i) => { p._seq = i + 1; });
+
+    sorted.forEach(p => cats[getCategory(p.admissionDate)].push(p));
+
+    ['today','tomorrow','thisweek','future'].forEach(cat => {
+        const list = cats[cat];
+        const n = list.length;
+        document.getElementById(`count-${cat}`).textContent = n;
+        document.getElementById(`lc-${cat}`).textContent    = `${n} 人`;
+
+        // Sort within category by admission date ascending
+        list.sort((a, b) => {
+            if (a.admissionDate !== b.admissionDate) return a.admissionDate < b.admissionDate ? -1 : 1;
+            return a.createdAt - b.createdAt;
+        });
+
+        const grid = document.getElementById(`grid-${cat}`);
+        grid.innerHTML = n === 0
+            ? '<div class="empty-tip">暂无患者</div>'
+            : list.map(renderCard).join('');
+    });
+}
+
+function renderCard(p) {
+    const badge = p.contacted ? '<span class="contacted-badge">已联系</span>' : '';
+    return `
+    <div class="patient-card ${p.contacted ? 'contacted' : ''}">
+        ${badge}
+        <div class="card-seq">No.${p._seq}</div>
+        <div class="patient-name">${esc(p.name || '未命名')}</div>
+        <div class="patient-info">
+            ${p.phone     ? `<div class="info-row"><span class="info-label">电话</span><a class="phone-link" href="tel:${esc(p.phone)}">${esc(p.phone)}</a></div>` : ''}
+            <div class="info-row"><span class="info-label">入院</span><span>${fmtDate(p.admissionDate)}</span></div>
+            ${p.diagnosis ? `<div class="info-row"><span class="info-label">诊断</span><span class="diagnosis-text">${esc(p.diagnosis)}</span></div>` : ''}
+            ${p.notes     ? `<div class="info-row"><span class="info-label">备注</span><span class="notes-text">${esc(p.notes)}</span></div>` : ''}
+        </div>
+        <div class="card-actions">
+            <button class="action-btn contact-btn" onclick="toggleContact('${p.id}')">
+                ${p.contacted ? '✓ 已联系' : '📞 标记联系'}
+            </button>
+            <button class="action-btn edit-btn"   onclick="openEditModal('${p.id}')">✏ 编辑</button>
+            <button class="action-btn delete-btn" onclick="deletePatient('${p.id}')">🗑 删除</button>
+        </div>
+    </div>`;
+}
+
+function esc(s) {
+    return String(s)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── CRUD ───────────────────────────────────────────
+function savePatient() {
+    const name = document.getElementById('f-name').value.trim();
+    const date = document.getElementById('f-date').value;
+    if (!name) { showToast('请填写患者姓名', 'error'); return; }
+    if (!date) { showToast('请填写入院日期', 'error'); return; }
+
+    const fields = {
+        name,
+        phone:         document.getElementById('f-phone').value.trim(),
+        admissionDate: date,
+        diagnosis:     document.getElementById('f-diagnosis').value.trim(),
+        notes:         document.getElementById('f-notes').value.trim(),
+    };
+
+    if (editingId) {
+        const idx = patients.findIndex(p => p.id === editingId);
+        if (idx !== -1) patients[idx] = { ...patients[idx], ...fields };
+        showToast('修改已保存', 'success');
+    } else {
+        patients.push({
+            id: Date.now().toString(36) + Math.random().toString(36).slice(2),
+            ...fields,
+            contacted: false,
+            createdAt: Date.now()
+        });
+        showToast('患者已添加', 'success');
+    }
+
+    persist(); render(); closeModal('patientModal');
+}
+
+function deletePatient(id) {
+    if (!confirm('确认删除该患者？')) return;
+    patients = patients.filter(p => p.id !== id);
+    persist(); render(); showToast('已删除');
+}
+
+function toggleContact(id) {
+    const p = patients.find(p => p.id === id);
+    if (!p) return;
+    p.contacted = !p.contacted;
+    persist(); render();
+    showToast(p.contacted ? '已标记为已联系' : '已取消联系标记');
+}
+
+function persist() { localStorage.setItem('patients', JSON.stringify(patients)); }
+
+// ── Modals ─────────────────────────────────────────
+function resetForm() {
+    document.getElementById('f-name').value      = '';
+    document.getElementById('f-phone').value     = '';
+    document.getElementById('f-date').value      = todayStr();
+    document.getElementById('f-diagnosis').value = '';
+    document.getElementById('f-notes').value     = '';
+    document.getElementById('imageInput').value  = '';
+    document.getElementById('recognizeBtn').disabled = true;
+    const rs = document.getElementById('recognizeStatus');
+    rs.textContent = ''; rs.style.color = '#718096';
+    const ua = document.getElementById('uploadArea');
+    ua.innerHTML = '<div class="upload-icon">📄</div><div class="upload-text">点击上传入院证图片（可选）</div>';
+    ua.classList.remove('has-image');
+    currentImageBase64 = null;
+}
+
+function openAddModal() {
+    editingId = null;
+    resetForm();
+    document.getElementById('modalTitle').textContent = '添加患者';
+    document.getElementById('patientModal').classList.add('show');
+}
+
+function openEditModal(id) {
+    const p = patients.find(p => p.id === id);
+    if (!p) return;
+    editingId = id;
+    resetForm();
+    document.getElementById('modalTitle').textContent      = '编辑患者';
+    document.getElementById('f-name').value                = p.name      || '';
+    document.getElementById('f-phone').value               = p.phone     || '';
+    document.getElementById('f-date').value                = p.admissionDate || '';
+    document.getElementById('f-diagnosis').value           = p.diagnosis || '';
+    document.getElementById('f-notes').value               = p.notes     || '';
+    document.getElementById('patientModal').classList.add('show');
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+function openSettings() {
+    document.getElementById('s-apikey').value = apiKey;
+    document.getElementById('settingsModal').classList.add('show');
+}
+function saveSettings() {
+    apiKey = document.getElementById('s-apikey').value.trim();
+    localStorage.setItem('kimiApiKey', apiKey);
+    closeModal('settingsModal');
+    showToast('设置已保存', 'success');
+}
+
+// Close on overlay click
+document.querySelectorAll('.modal-overlay').forEach(el => {
+    el.addEventListener('click', e => { if (e.target === el) closeModal(el.id); });
+});
+
+// ── Image & Kimi API ───────────────────────────────
+function handleImageUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+        const dataUrl = ev.target.result;
+        currentImageBase64 = dataUrl.split(',')[1];
+        const ua = document.getElementById('uploadArea');
+        ua.innerHTML = `<img src="${dataUrl}" class="upload-preview"><div class="upload-text" style="margin-top:8px">图片已上传，点击更换</div>`;
+        ua.classList.add('has-image');
+        document.getElementById('recognizeBtn').disabled = false;
+        const rs = document.getElementById('recognizeStatus');
+        rs.textContent = '图片已就绪，点击上方按钮识别';
+        rs.style.color = '#718096';
+    };
+    reader.readAsDataURL(file);
+}
+
+async function recognizeImage() {
+    if (!currentImageBase64) return;
+    if (!apiKey) { showToast('请先在 API 设置中填写 Key', 'error'); return; }
+
+    const btn = document.getElementById('recognizeBtn');
+    const rs  = document.getElementById('recognizeStatus');
+    btn.disabled = true;
+    btn.textContent = '识别中，请稍候…';
+    rs.textContent = '正在调用 Kimi AI…';
+    rs.style.color = '#718096';
+
+    try {
+        const resp = await fetch('https://api.moonshot.cn/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+                model: 'moonshot-v1-8k-vision-preview',
+                temperature: 0.1,
+                max_tokens: 300,
+                messages: [{
+                    role: 'user',
+                    content: [
+                        {
+                            type: 'image_url',
+                            image_url: { url: `data:image/jpeg;base64,${currentImageBase64}` }
+                        },
+                        {
+                            type: 'text',
+                            text: '请从这张入院证图片中提取以下信息，以JSON格式返回，字段名用英文：{"name":"患者姓名","phone":"联系电话","diagnosis":"诊断"}。找不到的字段留空字符串。只返回JSON对象，不要任何其他内容。'
+                        }
+                    ]
+                }]
+            })
+        });
+
+        if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            throw new Error(err.error?.message || `HTTP ${resp.status}`);
+        }
+
+        const data = await resp.json();
+        let content = data.choices[0].message.content.trim();
+        // Strip markdown code fence if present
+        const m = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+        if (m) content = m[1].trim();
+
+        const result = JSON.parse(content);
+        if (result.name)      document.getElementById('f-name').value      = result.name;
+        if (result.phone)     document.getElementById('f-phone').value     = result.phone;
+        if (result.diagnosis) document.getElementById('f-diagnosis').value = result.diagnosis;
+
+        rs.textContent = '✓ 识别完成，请核对并补充入院日期';
+        rs.style.color = '#38a169';
+        showToast('识别成功，请核对信息', 'success');
+
+    } catch (err) {
+        rs.textContent = '识别失败：' + err.message;
+        rs.style.color = '#e53e3e';
+        showToast('识别失败：' + err.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '🔍 重新识别';
+    }
+}
+
+// ── Scroll ─────────────────────────────────────────
+function scrollToSection(cat) {
+    const el = document.getElementById(`section-${cat}`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ── Toast ──────────────────────────────────────────
+function showToast(msg, type = '') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = `toast ${type} show`;
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+// ── Init ───────────────────────────────────────────
+render();
+</script>
+</body>
+</html>
