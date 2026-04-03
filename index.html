@@ -489,7 +489,7 @@
 <script>
 // ── State ──────────────────────────────────────────
 let patients  = JSON.parse(localStorage.getItem('patients') || '[]');
-let apiKey    = localStorage.getItem('kimiApiKey') || 'sk-cd2w8i5qQwzPvEAkfHjMRTXmYy2q2oOLHwT1arZm1enhx5sR';
+let apiKey    = localStorage.getItem('kimiApiKey') || '';
 let editingId = null;
 let currentImageBase64 = null;
 
@@ -790,6 +790,7 @@ function showToast(msg, type = '') {
 
 // ── Init ───────────────────────────────────────────
 render();
+if (!apiKey) openSettings();
 </script>
 </body>
 </html>
