@@ -736,7 +736,7 @@ async function recognizeImage() {
                         },
                         {
                             type: 'text',
-                            text: '请从这张入院证图片中提取以下信息，以JSON格式返回，字段名用英文：{"name":"患者姓名","phone":"联系电话","diagnosis":"诊断"}。找不到的字段留空字符串。只返回JSON对象，不要任何其他内容。'
+                            text: '请从这张入院证图片中提取以下信息，以JSON格式返回，字段名用英文：{"name":"患者姓名","phone":"联系电话","diagnosis":"诊断","admissionDate":"入院日期，格式必须为YYYY-MM-DD"}。找不到的字段留空字符串。只返回JSON对象，不要任何其他内容。'
                         }
                     ]
                 }]
@@ -755,9 +755,10 @@ async function recognizeImage() {
         if (m) content = m[1].trim();
 
         const result = JSON.parse(content);
-        if (result.name)      document.getElementById('f-name').value      = result.name;
-        if (result.phone)     document.getElementById('f-phone').value     = result.phone;
-        if (result.diagnosis) document.getElementById('f-diagnosis').value = result.diagnosis;
+        if (result.name)          document.getElementById('f-name').value      = result.name;
+        if (result.phone)         document.getElementById('f-phone').value     = result.phone;
+        if (result.diagnosis)     document.getElementById('f-diagnosis').value = result.diagnosis;
+        if (result.admissionDate) document.getElementById('f-date').value      = result.admissionDate;
 
         rs.textContent = '✓ 识别完成，请核对并补充入院日期';
         rs.style.color = '#38a169';
